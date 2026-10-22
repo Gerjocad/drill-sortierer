@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0E7A74">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Drill-Sortierer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column like a sorting tray — capture panel on top, labelled boxes below. */
+:root{
+  --bg:#F3F4F7; --surface:#FFFFFF; --sunken:#E8EAF0; --fg:#191B22; --muted:#626777; --line:#D6D9E2;
+  --accent:#0E7A74; --accent-fg:#FFFFFF; --accent-soft:#D5EEEC; --warn:#A35A00; --warn-soft:#FBEBD3; --danger:#B3261E;
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12141A; --surface:#1B1E26; --sunken:#242833; --fg:#E9EBF1; --muted:#9AA0B1; --line:#30343F;
+  --accent:#3FC2B8; --accent-fg:#06201E; --accent-soft:#163B39; --warn:#F2B35E; --warn-soft:#3A2B14; --danger:#F2867E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12141A; --surface:#1B1E26; --sunken:#242833; --fg:#E9EBF1; --muted:#9AA0B1; --line:#30343F;
+  --accent:#3FC2B8; --accent-fg:#06201E; --accent-soft:#163B39; --warn:#F2B35E; --warn-soft:#3A2B14; --danger:#F2867E; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);margin:0}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:grid;gap:28px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(28px,6vw,40px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:22px;font-weight:700}
+h3{font-size:16px;font-weight:500}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+header p{margin:4px 0 0;max-width:60ch}
+.stats{display:flex;gap:18px}
+.stat b{display:block;font-family:var(--f-display);font-size:26px;line-height:1}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:16px;min-width:0}
+.tabs{display:flex;gap:4px;background:var(--sunken);padding:4px;border-radius:999px;width:max-content;max-width:100%}
+.tabs button{border:0;background:none;color:var(--muted);font:600 14px var(--f-body);padding:8px 16px;border-radius:999px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+input[type=text],input[type=search],select{font:15px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;min-width:0}
+input[type=text].code{font-family:var(--f-mono);text-transform:uppercase;width:11ch}
+input[type=color]{width:46px;height:42px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:3px;cursor:pointer}
+input:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{font:600 14px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:var(--r);padding:10px 14px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.danger{color:var(--danger)}
+.btn.small{padding:6px 10px;font-size:13px}
+.photo-wrap{position:relative;max-width:100%;border-radius:var(--r);overflow:hidden;background:var(--sunken);touch-action:manipulation}
+#photo{display:block;max-width:100%;height:auto;cursor:crosshair}
+#marker{position:absolute;border:2px solid #fff;outline:2px solid #000;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.live{display:grid;gap:10px}
+.live-view{position:relative;border-radius:var(--r);overflow:hidden;background:#000;max-width:100%}
+.live-view video{display:block;width:100%;height:auto;max-height:60vh;object-fit:contain}
+.reticle{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:2px solid #fff;outline:2px solid rgba(0,0,0,.6);border-radius:50%;pointer-events:none}
+.live-bar{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
+.live-bar .read{min-width:0}
+.live-bar .read b{font-family:var(--f-display);font-size:28px;line-height:1}
+.live-actions{display:flex;flex-wrap:wrap;gap:8px}
+.pastezone{border:2px dashed var(--line);border-radius:var(--r);padding:16px;text-align:center;color:var(--muted);background:var(--bg);min-height:64px;font-size:14px;overflow:hidden;-webkit-user-select:text;user-select:text}
+.pastezone:focus{outline:none;border-color:var(--accent);color:var(--fg)}
+.pastezone img{display:none}
+.result{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start;border-top:1px dashed var(--line);padding-top:16px}
+.result .meta{display:grid;gap:12px;min-width:0}
+.boxcode{font-family:var(--f-display);font-size:44px;font-weight:700;line-height:1;letter-spacing:-.01em}
+.matches{display:grid;gap:6px}
+.match{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);cursor:pointer;background:var(--bg)}
+.match[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.match small{color:var(--muted)}
+.notice{background:var(--warn-soft);color:var(--warn);border-radius:var(--r);padding:8px 12px;font-size:14px}
+.fields{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+.fields input{width:100%}
+/* Faceted drill swatch */
+.drill{--c:#888;width:var(--s,28px);height:var(--s,28px);border-radius:50%;background:var(--c);position:relative;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+.drill::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 22.5deg,rgba(255,255,255,.28) 0 12.5%,rgba(0,0,0,.06) 0 25%,rgba(255,255,255,.14) 0 37.5%,rgba(0,0,0,.14) 0 50%,rgba(255,255,255,.05) 0 62.5%,rgba(0,0,0,.2) 0 75%,rgba(255,255,255,.1) 0 87.5%,rgba(0,0,0,.08) 0);mask:radial-gradient(circle,transparent 30%,#000 31%)}
+.drill.lg{--s:96px}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.boxes{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+.box-head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.box-head .code{font-family:var(--f-display);font-size:22px;font-weight:700}
+.box-head .count{margin-left:auto}
+.box-strip{height:6px}
+.items{list-style:none;margin:0;padding:4px 0}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 14px}
+.item + .item{border-top:1px solid var(--sunken)}
+.item .name{min-width:0;overflow-wrap:anywhere}
+.item .name small{display:block;color:var(--muted);font-size:12px}
+.item .edit{grid-column:1/-1;display:grid;gap:8px}
+.iconbtn{border:0;background:none;color:var(--muted);cursor:pointer;font:600 13px var(--f-body);padding:4px 6px;border-radius:6px}
+.iconbtn:hover{color:var(--fg);background:var(--sunken)}
+.legend{display:grid;grid-template-columns:auto repeat(5,1fr);gap:4px 6px;align-items:center;font-size:13px}
+.legend .cell{display:flex;align-items:center;gap:6px;min-width:0}
+.legend .fam{font-weight:600;padding-right:6px}
+.scroll{overflow-x:auto}
+.pairs{display:grid;gap:6px}
+.pair{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.pair .de{margin-left:auto}
+.empty{border:1px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--muted)}
+textarea{width:100%;min-height:140px;font:12px var(--f-mono);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:var(--r);padding:10px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
+input[type=range]{accent-color:var(--accent)}
+@media (max-width:560px){.result{grid-template-columns:1fr}.fields{grid-template-columns:1fr}.boxcode{font-size:38px}}
+@media (prefers-reduced-motion:no-preference){.match,.btn,.tabs button{transition:background .15s,border-color .15s}}
+
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Drill-Sortierer</h1>
+      <p class="muted">Rest-Diamonds erfassen: per Foto, Hex-Code oder DMC-Nummer. Jede Farbe bekommt einen Box-Code, damit gleiche und ähnliche Drills in dieselbe Tüte kommen.</p>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="statScans" class="mono">0</b><span class="label">Farben</span></div>
+      <div class="stat"><b id="statBoxes" class="mono">0</b><span class="label">Boxen</span></div>
+    </div>
+  </header>
+
+  <section class="panel" aria-labelledby="capTitle">
+    <div class="toolbar">
+      <h2 id="capTitle">Farbe erfassen</h2>
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-photo" aria-selected="true" data-tab="photo">Foto</button>
+        <button role="tab" id="tab-hex" aria-selected="false" data-tab="hex">Hex</button>
+        <button role="tab" id="tab-dmc" aria-selected="false" data-tab="dmc">DMC-Nr.</button>
+      </div>
+    </div>
+
+    <div id="pane-photo" class="grid" style="display:grid;gap:12px">
+      <div class="row">
+        <button class="btn primary" id="liveBtn" type="button" hidden>Live-Kamera</button>
+        <button class="btn primary" id="camBtn" type="button">Foto aufnehmen</button>
+        <button class="btn" id="galBtn" type="button">Aus Galerie wählen</button>
+        <input id="camInput" type="file" accept="image/*" capture="environment" hidden>
+        <input id="photoInput" type="file" accept="image/*" hidden>
+        <label class="row" style="gap:6px"><span class="label">Messfläche</span>
+          <input id="radius" type="range" min="2" max="30" value="8"></label>
+        <button class="btn small" id="wbBtn" type="button">Weißabgleich: aus</button>
+      </div>
+      <div class="live" id="live" hidden>
+        <div class="live-view"><video id="liveVideo" playsinline muted autoplay></video><div class="reticle" id="reticle"></div></div>
+        <div class="live-bar">
+          <span class="drill" id="liveSwatch" style="--s:56px"></span>
+          <div class="read"><b id="liveBox">–</b> <span class="mono" id="liveDmc"></span><br><span class="hint">Kreis auf einen Drill richten, ruhig halten.</span></div>
+        </div>
+        <div class="live-actions">
+          <button class="btn primary" id="liveTake" type="button">Farbe übernehmen</button>
+          <button class="btn" id="liveWb" type="button">Weiß hier setzen</button>
+          <button class="btn" id="liveTorch" type="button" hidden>Licht an</button>
+          <button class="btn" id="liveClose" type="button">Kamera aus</button>
+        </div>
+      </div>
+      <div class="pastezone" id="pasteZone" contenteditable="true" role="textbox" aria-label="Foto hier einfügen" inputmode="none">Öffnen die Buttons nichts (z. B. in der Claude-App)? Foto in der Fotos-App öffnen, <b>Teilen → Kopieren</b>, dann hier lange drücken und <b>Einfügen</b> wählen.</div>
+      <p class="hint" id="photoHint">Tipp: Drills auf weißes Papier legen, bei Tageslicht ohne Blitz fotografieren. Dann auf einen Drill tippen. Glanzpunkte werden beim Messen herausgerechnet.</p>
+      <div class="photo-wrap" id="photoWrap" hidden>
+        <canvas id="photo"></canvas>
+        <div id="marker" hidden></div>
+      </div>
+    </div>
+
+    <div id="pane-hex" hidden>
+      <div class="row">
+        <input id="hexInput" type="text" class="code" placeholder="#3A7BD5" maxlength="7" autocomplete="off" spellcheck="false">
+        <input id="hexPicker" type="color" value="#3a7bd5" aria-label="Farbwähler">
+        <button class="btn" id="hexGo" type="button">Übernehmen</button>
+      </div>
+    </div>
+
+    <div id="pane-dmc" hidden>
+      <div class="row">
+        <input id="dmcInput" type="text" class="code" list="dmcList" placeholder="z. B. 310" autocomplete="off" spellcheck="false">
+        <datalist id="dmcList"></datalist>
+        <button class="btn" id="dmcGo" type="button">Übernehmen</button>
+        <span class="hint">Auch „White“, „Ecru“ oder „B5200“.</span>
+      </div>
+    </div>
+
+    <div class="result" id="result" hidden>
+      <div class="drill lg" id="resSwatch"></div>
+      <div class="meta">
+        <div class="row" style="align-items:end;gap:18px">
+          <div><div class="label">Box-Code</div><div class="boxcode" id="resBox">–</div></div>
+          <div><div class="label">Farbfamilie</div><div id="resFam">–</div></div>
+          <div><div class="label">Hex</div><div class="mono" id="resHex">–</div></div>
+        </div>
+        <div id="resDup" class="notice" hidden></div>
+        <div>
+          <div class="label" style="margin-bottom:6px">Nächste DMC-Farben (tippen zum Auswählen)</div>
+          <div class="matches" id="resMatches" role="radiogroup"></div>
+        </div>
+        <div class="fields">
+          <input id="qtyInput" type="text" placeholder="Menge, z. B. ½ Tüte">
+          <input id="noteInput" type="text" placeholder="Notiz (optional), z. B. aus Bild „Wolf“">
+        </div>
+        <div class="row">
+          <button class="btn primary" id="saveBtn" type="button">Speichern</button>
+          <span class="hint" id="saveHint"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:grid;gap:14px" aria-labelledby="boxTitle">
+    <div class="toolbar">
+      <h2 id="boxTitle">Deine Boxen</h2>
+      <div class="row">
+        <input id="search" type="search" placeholder="Suchen: 310, BL-2, Blau …" aria-label="Suchen">
+        <button class="btn small" id="exportCsv" type="button">CSV</button>
+        <button class="btn small" id="exportJson" type="button">Backup</button>
+        <button class="btn small" id="importBtn" type="button">Import</button>
+        <input id="importInput" type="file" accept=".json,application/json" hidden>
+      </div>
+    </div>
+    <p class="hint" id="storeHint">Lade gespeicherte Farben …</p>
+    <div id="boxes" class="boxes"></div>
+    <div id="exportOut" hidden style="display:grid;gap:6px">
+      <p class="hint">Download ist hier nicht möglich. Inhalt kopieren und als Datei speichern:</p>
+      <textarea id="exportText" readonly></textarea>
+    </div>
+  </section>
+
+  <section style="display:grid;gap:12px" aria-labelledby="pairTitle">
+    <div class="toolbar">
+      <h2 id="pairTitle">Kann zusammen in eine Tüte</h2>
+      <label class="row" style="gap:8px"><span class="label">Toleranz</span>
+        <input id="tol" type="range" min="1" max="12" step="0.5" value="4">
+        <span class="mono" id="tolVal">ΔE 4</span></label>
+    </div>
+    <p class="hint">Farbpaare mit kleinem Farbabstand (ΔE 2000). Unter ΔE 2 sieht man im fertigen Bild praktisch keinen Unterschied, bis etwa 5 nur bei genauem Hinsehen.</p>
+    <div id="pairs" class="pairs"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="legTitle">
+    <h2 id="legTitle">So funktioniert der Box-Code</h2>
+    <p class="hint" style="max-width:65ch">Zwei Buchstaben für die Farbfamilie, eine Ziffer für die Helligkeit (1 = sehr hell, 5 = sehr dunkel). Der Code hängt nur von der Farbe ab und ändert sich nie, du kannst ihn also auf Tüten oder Dosen schreiben. Jeder Eintrag hat zusätzlich eine laufende Nummer wie <span class="mono">#0007</span>. Beispiel-Drills pro Feld aus der DMC-Palette:</p>
+    <div class="scroll"><div class="legend" id="legend"></div></div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const IS_APP = true;
+const DMC = [["3713","Salmon Very Light","FFE2E2"],["761","Salmon Light","FFC9C9"],["760","Salmon","F5ADAD"],["3712","Salmon Medium","F18787"],["3328","Salmon Dark","E36D6D"],["347","Salmon Very Dark","BF2D2D"],["353","Peach","FED7CC"],["352","Coral Light","FD9C97"],["351","Coral","E96A67"],["350","Coral Medium","E04848"],["349","Coral Dark","D21035"],["817","Coral Red Very Dark","BB051F"],["3708","Melon Light","FFCBD5"],["3706","Melon Medium","FFADBC"],["3705","Melon Dark","FF7992"],["3801","Melon Very Dark","E74967"],["666","Bright Red","E31D42"],["321","Red","C72B3B"],["304","Red Medium","B71F33"],["498","Red Dark","A7132B"],["816","Garnet","970B23"],["815","Garnet Medium","87071F"],["814","Garnet Dark","7B001B"],["894","Carnation Very Light","FFB2BB"],["893","Carnation Light","FC90A2"],["892","Carnation Medium","FF798C"],["891","Carnation Dark","FF5773"],["818","Baby Pink","FFDFD9"],["957","Geranium Pale","FDB5B5"],["956","Geranium","FF9191"],["309","Rose Dark","564A4A"],["963","Dusty Rose Ult Vy Lt","FFD7D7"],["3716","Dusty Rose Med Vy Lt","FFBDBD"],["962","Dusty Rose Medium","E68A8A"],["961","Dusty Rose Dark","CF7373"],["3833","Raspberry Light","EA8699"],["3832","Raspberry Medium","DB556E"],["3831","Raspberry Dark","B32F48"],["777","Raspberry Very Dark","913546"],["819","Baby Pink Light","FFEEEB"],["3326","Rose Light","FBADB4"],["776","Pink Medium","FCB0B9"],["899","Rose Medium","F27688"],["335","Rose","EE546E"],["326","Rose Very Dark","B33B4B"],["151","Dusty Rose Vry Lt","F0CED4"],["3354","Dusty Rose Light","E4A6AC"],["3733","Dusty Rose","E8879B"],["3731","Dusty Rose Very Dark","DA6783"],["3350","Dusty Rose Ultra Dark","BC4365"],["150","Dusty Rose Ult Vy Dk","AB0249"],["3689","Mauve Light","FBBFC2"],["3688","Mauve Medium","E7A9AC"],["3687","Mauve","C96B70"],["3803","Mauve Dark","AB3357"],["3685","Mauve Very Dark","881531"],["605","Cranberry Very Light","FFC0CD"],["604","Cranberry Light","FFB0BE"],["603","Cranberry","FFA4BE"],["602","Cranberry Medium","E24874"],["601","Cranberry Dark","D1286A"],["600","Cranberry Very Dark","CD2F63"],["3806","Cyclamen Pink Light","FF8CAE"],["3805","Cyclamen Pink","F3478B"],["3804","Cyclamen Pink Dark","E02876"],["3609","Plum Ultra Light","F4AED5"],["3608","Plum Very Light","EA9CC4"],["3607","Plum Light","C54989"],["718","Plum","9C2462"],["917","Plum Medium","9B1359"],["915","Plum Dark","820043"],["225","Shell Pink Ult Vy Lt","FFDFD5"],["224","Shell Pink Very Light","EBB7AF"],["152","Shell Pink Med Light","E2A099"],["223","Shell Pink Light","CC847C"],["3722","Shell Pink Med","BC6C64"],["3721","Shell Pink Dark","A14B51"],["221","Shell Pink Vy Dk","883E43"],["778","Antique Mauve Vy Lt","DFB3BB"],["3727","Antique Mauve Light","DBA9B2"],["316","Antique Mauve Med","B7737F"],["3726","Antique Mauve Dark","9B5B66"],["315","Antique Mauve Md Dk","814952"],["3802","Antique Mauve Vy Dk","714149"],["902","Garnet Very Dark","822637"],["3743","Antique Violet Vy Lt","D7CBD3"],["3042","Antique Violet Light","B79DA7"],["3041","Antique Violet Medium","956F7C"],["3740","Antique Violet Dark","785762"],["3836","Grape Light","BA91AA"],["3835","Grape Medium","946083"],["3834","Grape Dark","72375D"],["154","Grape Very Dark","572433"],["211","Lavender Light","E3CBE3"],["210","Lavender Medium","C39FC3"],["209","Lavender Dark","A37BA7"],["208","Lavender Very Dark","835B8B"],["3837","Lavender Ultra Dark","6C3A6E"],["327","Violet Dark","633666"],["153","Violet Very Light","E6CCD9"],["554","Violet Light","DBB3CB"],["553","Violet","A3638B"],["552","Violet  Medium","803A6B"],["550","Violet Very Dark","5C184E"],["3747","Blue Violet Vy Lt","D3D7ED"],["341","Blue Violet Light","B7BFDD"],["156","Blue Violet Med Lt","A3AED1"],["340","Blue Violet Medium","ADA7C7"],["155","Blue Violet Med Dark","9891B6"],["3746","Blue Violet Dark","776B98"],["333","Blue Violet Very Dark","5C5478"],["157","Cornflower Blue Vy Lt","BBC3D9"],["794","Cornflower Blue Light","8F9CC1"],["793","Cornflower Blue Med","707DA2"],["3807","Cornflower Blue","60678C"],["792","Cornflower Blue Dark","555B7B"],["158","Cornflower Blu M V D","4C526E"],["791","Cornflower Blue V D","464563"],["3840","Lavender Blue Light","B0C0DA"],["3839","Lavender Blue Med","7B8EAB"],["3838","Lavender Blue Dark","5C7294"],["800","Delft Blue Pale","C0CCDE"],["809","Delft Blue","94A8C6"],["799","Delft Blue Medium","748EB6"],["798","Delft Blue Dark","466A8E"],["797","Royal Blue","13477D"],["796","Royal Blue Dark","11416D"],["820","Royal Blue Very Dark","0E365C"],["162","Blue Ultra Very Light","DBECF5"],["827","Blue Very Light","BDDDED"],["813","Blue Light","A1C2D7"],["826","Blue Medium","6B9EBF"],["825","Blue Dark","4781A5"],["824","Blue Very Dark","396987"],["996","Electric Blue Medium","30C2EC"],["3843","Electric Blue","14AAD0"],["995","Electric Blue Dark","2696B6"],["3846","Turquoise Bright Light","06E3E6"],["3845","Turquoise Bright Med","04C4CA"],["3844","Turquoise Bright Dark","12AEBA"],["159","Blue Gray Light","C7CAD7"],["160","Blue Gray Medium","999FB7"],["161","Blue Gray","7880A4"],["3756","Baby Blue Ult Vy Lt","EEFCFC"],["775","Baby Blue Very Light","D9EBF1"],["3841","Baby Blue Pale","CDDFED"],["3325","Baby Blue Light","B8D2E6"],["3755","Baby Blue","93B4CE"],["334","Baby Blue Medium","739FC1"],["322","Baby Blue Dark","5A8FB8"],["312","Baby Blue Very Dark","35668B"],["803","Baby Blue Ult Vy Dk","2C597C"],["336","Navy Blue","253B73"],["823","Navy Blue Dark","213063"],["939","Navy Blue Very Dark","1B2853"],["3753","Antique Blue Ult Vy Lt","DBE2E9"],["3752","Antique Blue Very Lt","C7D1DB"],["932","Antique Blue Light","A2B5C6"],["931","Antique Blue Medium","6A859E"],["930","Antique Blue Dark","455C71"],["3750","Antique Blue Very Dk","384C5E"],["828","Sky Blue Vy Lt","C5E8ED"],["3761","Sky Blue Light","ACD8E2"],["519","Sky Blue","7EB1C8"],["518","Wedgewood Light","4F93A7"],["3760","Wedgewood Med","3E85A2"],["517","Wedgewood Dark","3B768F"],["3842","Wedgewood Vry Dk","32667C"],["311","Wedgewood Ult VyDk","1C5066"],["747","Peacock Blue Vy Lt","E5FCFD"],["3766","Peacock Blue Light","99CFD9"],["807","Peacock Blue","64ABBA"],["806","Peacock Blue Dark","3D95A5"],["3765","Peacock Blue Vy Dk","347F8C"],["3811","Turquoise Very Light","BCE3E6"],["598","Turquoise Light","90C3CC"],["597","Turquoise","5BA3B3"],["3810","Turquoise Dark","488E9A"],["3809","Turquoise Vy Dark","3F7C85"],["3808","Turquoise Ult Vy Dk","366970"],["928","Gray Green Vy Lt","DDE3E3"],["927","Gray Green Light","BDCBCB"],["926","Gray Green Med","98AEAE"],["3768","Gray Green Dark","657F7F"],["924","Gray Green Vy Dark","566A6A"],["3849","Teal Green Light","52B3A4"],["3848","Teal Green Med","559392"],["3847","Teal Green Dark","347D75"],["964","Sea Green Light","A9E2D8"],["959","Sea Green Med","59C7B4"],["958","Sea Green Dark","3EB6A1"],["3812","Sea Green Vy Dk","2F8C84"],["3851","Green Bright Lt","49B3A1"],["943","Green Bright Md","3D9384"],["3850","Green Bright Dk","378477"],["993","Aquamarine Vy Lt","90C0B4"],["992","Aquamarine Lt","6FAE9F"],["3814","Aquamarine","508B7D"],["991","Aquamarine Dk","477B6E"],["966","Jade Ultra Vy Lt","B9D7C0"],["564","Jade Very Light","A7CDAF"],["563","Jade Light","8FC098"],["562","Jade Medium","53976A"],["505","Jade Green","338362"],["3817","Celadon Green Lt","99C3AA"],["3816","Celadon Green","65A57D"],["163","Celadon Green Md","4D8361"],["3815","Celadon Green Dk","477759"],["561","Celadon Green VD","2C6A45"],["504","Blue Green Vy Lt","C4DECC"],["3813","Blue Green Lt","B2D4BD"],["503","Blue Green Med","7BAC94"],["502","Blue Green","5B9071"],["501","Blue Green Dark","396F52"],["500","Blue Green Vy Dk","044D33"],["955","Nile Green Light","A2D6AD"],["954","Nile Green","88BA91"],["913","Nile Green Med","6DAB77"],["912","Emerald Green Lt","1B9D6B"],["911","Emerald Green Med","189065"],["910","Emerald Green Dark","187E56"],["909","Emerald Green Vy Dk","156F49"],["3818","Emerald Grn Ult V Dk","115A3B"],["369","Pistachio Green Vy Lt","D7EDCC"],["368","Pistachio Green Lt","A6C298"],["320","Pistachio Green Med","69885A"],["367","Pistachio Green Dk","617A52"],["319","Pistachio Grn Vy Dk","205F2E"],["890","Pistachio Grn Ult V D","174923"],["164","Forest Green Lt","C8D8B8"],["989","Forest Green","8DA675"],["988","Forest Green Med","738B5B"],["987","Forest Green Dk","587141"],["986","Forest Green Vy Dk","405230"],["772","Yellow Green Vy Lt","E4ECD4"],["3348","Yellow Green Lt","CCD9B1"],["3347","Yellow Green Med","71935C"],["3346","Hunter Green","406A3A"],["3345","Hunter Green Dk","1B5915"],["895","Hunter Green Vy Dk","1B5300"],["704","Chartreuse Bright","9ECF34"],["703","Chartreuse","7BB547"],["702","Kelly Green","47A72F"],["701","Green Light","3F8F29"],["700","Green Bright","07731B"],["699","Green","056517"],["907","Parrot Green Lt","C7E666"],["906","Parrot Green Md","7FB335"],["905","Parrot Green Dk","628A28"],["904","Parrot Green V Dk","557822"],["472","Avocado Grn U Lt","D8E498"],["471","Avocado Grn V Lt","AEBF79"],["470","Avocado Grn Lt","94AB4F"],["469","Avocado Green","72843C"],["937","Avocado Green Md","627133"],["936","Avocado Grn V Dk","4C5826"],["935","Avocado Green Dk","424D21"],["934","Avocado Grn Black","313919"],["523","Fern Green Lt","ABB197"],["3053","Green Gray","9CA482"],["3052","Green Gray Md","889268"],["3051","Green Gray Dk","5F6648"],["524","Fern Green Vy Lt","C4CDAC"],["522","Fern Green","969E7E"],["520","Fern Green Dark","666D4F"],["3364","Pine Green","83975F"],["3363","Pine Green Md","728256"],["3362","Pine Green Dk","5E6B47"],["165","Moss Green Vy Lt","EFF4A4"],["3819","Moss Green Lt","E0E868"],["166","Moss Green Md Lt","C0C840"],["581","Moss Green","A7AE38"],["580","Moss Green Dk","888D33"],["734","Olive Green Lt","C7C077"],["733","Olive Green Md","BCB34C"],["732","Olive Green","948C36"],["731","Olive Green Dk","938B37"],["730","Olive Green V Dk","827B30"],["3013","Khaki Green Lt","B9B982"],["3012","Khaki Green Md","A6A75D"],["3011","Khaki Green Dk","898A58"],["372","Mustard Lt","CCB784"],["371","Mustard","BFA671"],["370","Mustard Medium","B89D64"],["834","Golden Olive Vy Lt","DBBE7F"],["833","Golden Olive Lt","C8AB6C"],["832","Golden Olive","BD9B51"],["831","Golden Olive Md","AA8F56"],["830","Golden Olive Dk","8D784B"],["829","Golden Olive Vy Dk","7E6B42"],["613","Drab Brown V Lt","DCC4AA"],["612","Drab Brown Lt","BC9A78"],["611","Drab Brown","967656"],["610","Drab Brown Dk","796047"],["3047","Yellow Beige Lt","E7D6C1"],["3046","Yellow Beige Md","D8BC9A"],["3045","Yellow Beige Dk","BC966A"],["167","Yellow Beige V Dk","A77C49"],["746","Off White","FCFCEE"],["677","Old Gold Vy Lt","F5ECCB"],["422","Hazelnut Brown Lt","C69F7B"],["3828","Hazelnut Brown","B78B61"],["420","Hazelnut Brown Dk","A07042"],["869","Hazelnut Brown V Dk","835E39"],["728","Topaz","E4B468"],["783","Topaz Medium","CE9124"],["782","Topaz Dark","AE7720"],["781","Topaz Very Dark","A26D20"],["780","Topaz Ultra Vy Dk","94631A"],["676","Old Gold Lt","E5CE97"],["729","Old Gold Medium","D0A53E"],["680","Old Gold Dark","BC8D0E"],["3829","Old Gold Vy Dark","A98204"],["3822","Straw Light","F6DC98"],["3821","Straw","F3CE75"],["3820","Straw Dark","DFB65F"],["3852","Straw Very Dark","CD9D37"],["445","Lemon Light","FFFB8B"],["307","Lemon","FDED54"],["973","Canary Bright","FFE300"],["444","Lemon Dark","FFD600"],["3078","Golden Yellow Vy Lt","FDF9CD"],["727","Topaz Vy Lt","FFF1AF"],["726","Topaz Light","FDD755"],["725","Topaz Med Lt","FFC840"],["972","Canary Deep","FFB515"],["745","Yellow Pale Light","FFE9AD"],["744","Yellow Pale","FFE793"],["743","Yellow Med","FED376"],["742","Tangerine Light","FFBF57"],["741","Tangerine Med","FFA32B"],["740","Tangerine","FF8B00"],["970","Pumpkin Light","F78B13"],["971","Pumpkin","F67F00"],["947","Burnt Orange","FF7B4D"],["946","Burnt Orange Med","EB6307"],["900","Burnt Orange Dark","D15807"],["967","Apricot Very Light","FFDED5"],["3824","Apricot Light","FECDC2"],["3341","Apricot","FCAB98"],["3340","Apricot Med","FF836F"],["608","Burnt Orange Bright","FD5D35"],["606","Orange?Red Bright","FA3203"],["951","Tawny Light","FFE2CF"],["3856","Mahogany Ult Vy Lt","FFD3B5"],["722","Orange Spice Light","F7976F"],["721","Orange Spice Med","F27842"],["720","Orange Spice Dark","E55C1F"],["3825","Pumpkin Pale","FDBD96"],["922","Copper Light","E27323"],["921","Copper","C66218"],["920","Copper Med","AC5414"],["919","Red?Copper","A64510"],["918","Red?Copper Dark","82340A"],["3770","Tawny Vy Light","FFEEE3"],["945","Tawny","FBD5BB"],["402","Mahogany Vy Lt","F7A777"],["3776","Mahogany Light","CF7939"],["301","Mahogany Med","B35F2B"],["400","Mahogany Dark","8F430F"],["300","Mahogany Vy Dk","6F2F00"],["3823","Yellow Ultra Pale","FFFDE3"],["3855","Autumn Gold Lt","FAD396"],["3854","Autumn Gold Med","F2AF68"],["3853","Autumn Gold Dk","F29746"],["3827","Golden Brown Pale","F7BB77"],["977","Golden Brown Light","DC9C56"],["976","Golden Brown Med","C28142"],["3826","Golden Brown","AD7239"],["975","Golden Brown Dk","914F12"],["948","Peach Very Light","FEE7DA"],["754","Peach Light","F7CBBF"],["3771","Terra Cotta Ult Vy Lt","F4BBA9"],["758","Terra Cotta Vy Lt","EEAA9B"],["3778","Terra Cotta Light","D98978"],["356","Terra Cotta Med","C56A5B"],["3830","Terra Cotta","B95544"],["355","Terra Cotta Dark","984436"],["3777","Terra Cotta Vy Dk","863022"],["3779","Rosewood Ult Vy Lt","F8CAC8"],["3859","Rosewood Light","BA8B7C"],["3858","Rosewood Med","964A3F"],["3857","Rosewood Dark","68251A"],["3774","Desert Sand Vy Lt","F3E1D7"],["950","Desert Sand Light","EED3C4"],["3064","Desert Sand","C48E70"],["407","Desert Sand Med","BB8161"],["3773","Desert Sand Dark","B67552"],["3772","Desert Sand Vy Dk","A06C50"],["632","Desert Sand Ult Vy Dk","875539"],["453","Shell Gray Light","D7CECB"],["452","Shell Gray Med","C0B3AE"],["451","Shell Gray Dark","917B73"],["3861","Cocoa Light","A68881"],["3860","Cocoa","7D5D57"],["779","Cocoa Dark","624B45"],["712","Cream","FFFBEF"],["739","Tan Ult Vy Lt","F8E4C8"],["738","Tan Very Light","ECCC9E"],["437","Tan Light","E4BB8E"],["436","Tan","CB9051"],["435","Brown Very Light","B87748"],["434","Brown Light","985E33"],["433","Brown Med","7A451F"],["801","Coffee Brown Dk","653919"],["898","Coffee Brown Vy Dk","492A13"],["938","Coffee Brown Ult Dk","361F0E"],["3371","Black Brown","1E1108"],["543","Beige Brown Ult Vy Lt","F2E3CE"],["3864","Mocha Beige Light","CBB69C"],["3863","Mocha Beige Med","A4835C"],["3862","Mocha Beige Dark","8A6E4E"],["3031","Mocha Brown Vy Dk","4B3C2A"],["B5200","Snow White","FFFFFF"],["White","White","FCFBF8"],["3865","Winter White","F9F7F1"],["Ecru","Ecru","F0EADA"],["822","Beige Gray Light","E7E2D3"],["644","Beige Gray Med","DDD8CB"],["642","Beige Gray Dark","A49878"],["640","Beige Gray Vy Dk","857B61"],["3787","Brown Gray Dark","625D50"],["3021","Brown Gray Vy Dk","4F4B41"],["3024","Brown Gray Vy Lt","EBEAE7"],["3023","Brown Gray Light","B1AA97"],["3022","Brown Gray Med","8E9078"],["535","Ash Gray Vy Lt","636458"],["3033","Mocha Brown Vy Lt","E3D8CC"],["3782","Mocha Brown Lt","D2BCA6"],["3032","Mocha Brown Med","B39F8B"],["3790","Beige Gray Ult Dk","7F6A55"],["3781","Mocha Brown Dk","6B5743"],["3866","Mocha Brn Ult Vy Lt","FAF6F0"],["842","Beige Brown Vy Lt","D1BAA1"],["841","Beige Brown Lt","B69B7E"],["840","Beige Brown Med","9A7C5C"],["839","Beige Brown Dk","675541"],["838","Beige Brown Vy Dk","594937"],["3072","Beaver Gray Vy Lt","E6E8E8"],["648","Beaver Gray Lt","BCB4AC"],["647","Beaver Gray Med","B0A69C"],["646","Beaver Gray Dk","877D73"],["645","Beaver Gray Vy Dk","6E655C"],["844","Beaver Gray Ult Dk","484848"],["762","Pearl Gray Vy Lt","ECECEC"],["415","Pearl Gray","D3D3D6"],["318","Steel Gray Lt","ABABAB"],["414","Steel Gray Dk","8C8C8C"],["168","Pewter Very Light","D1D1D1"],["169","Pewter Light","848484"],["317","Pewter Gray","6C6C6C"],["413","Pewter Gray Dark","565656"],["3799","Pewter Gray Vy Dk","424242"],["310","Black","000000"]];
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255];}
+function rgbToHex(r,g,b){return[r,g,b].map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('').toUpperCase();}
+function rgbToLab([r,g,b]){const f=c=>{c/=255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4)};const R=f(r),G=f(g),B=f(b);
+let x=(R*0.4124564+G*0.3575761+B*0.1804375)/0.95047,y=(R*0.2126729+G*0.7151522+B*0.0721750),z=(R*0.0193339+G*0.1191920+B*0.9503041)/1.08883;
+const t=v=>v>0.008856?Math.cbrt(v):(7.787*v+16/116);x=t(x);y=t(y);z=t(z);return[116*y-16,500*(x-y),200*(y-z)];}
+function deltaE([L1,a1,b1],[L2,a2,b2]){const rad=Math.PI/180,C1=Math.hypot(a1,b1),C2=Math.hypot(a2,b2),Cm=(C1+C2)/2,G=0.5*(1-Math.sqrt(Math.pow(Cm,7)/(Math.pow(Cm,7)+Math.pow(25,7))));
+const a1p=a1*(1+G),a2p=a2*(1+G),C1p=Math.hypot(a1p,b1),C2p=Math.hypot(a2p,b2);const hp=(a,b)=>{if(a===0&&b===0)return 0;let h=Math.atan2(b,a)/rad;return h<0?h+360:h};
+const h1p=hp(a1p,b1),h2p=hp(a2p,b2),dL=L2-L1,dC=C2p-C1p;let dh=0;if(C1p*C2p!==0){dh=h2p-h1p;if(dh>180)dh-=360;else if(dh<-180)dh+=360;}
+const dH=2*Math.sqrt(C1p*C2p)*Math.sin(dh*rad/2),Lm=(L1+L2)/2,Cmp=(C1p+C2p)/2;let hm=h1p+h2p;if(C1p*C2p!==0){if(Math.abs(h1p-h2p)>180)hm=(h1p+h2p+(h1p+h2p<360?360:-360))/2;else hm=(h1p+h2p)/2;}
+const T=1-0.17*Math.cos((hm-30)*rad)+0.24*Math.cos(2*hm*rad)+0.32*Math.cos((3*hm+6)*rad)-0.2*Math.cos((4*hm-63)*rad);const dth=30*Math.exp(-Math.pow((hm-275)/25,2));
+const RC=2*Math.sqrt(Math.pow(Cmp,7)/(Math.pow(Cmp,7)+Math.pow(25,7))),SL=1+0.015*Math.pow(Lm-50,2)/Math.sqrt(20+Math.pow(Lm-50,2)),SC=1+0.045*Cmp,SH=1+0.015*Cmp*T,RT=-Math.sin(2*dth*rad)*RC;
+return Math.sqrt(Math.pow(dL/SL,2)+Math.pow(dC/SC,2)+Math.pow(dH/SH,2)+RT*(dC/SC)*(dH/SH));}
+const FAM={WS:'Weiß',SW:'Schwarz',GR:'Grau',BE:'Beige',BR:'Braun',RO:'Rot',OR:'Orange',GE:'Gelb',GN:'Grün',TU:'Türkis',BL:'Blau',VI:'Violett',PI:'Pink'};
+function boxCode(hex){const[L,a,b]=rgbToLab(hexToRgb(hex));const C=Math.hypot(a,b);let h=Math.atan2(b,a)*180/Math.PI;if(h<0)h+=360;
+let fam;if(C<7){fam=L>=88?'WS':L<22?'SW':'GR';}
+else if(h>=40&&h<100&&((C<30&&L>=55)||(C<16)))fam='BE';
+else if(h>=25&&h<85&&L<55&&C<55)fam='BR';
+else if(h<20||h>=348)fam='PI';else if(h<48)fam='RO';else if(h<72)fam='OR';else if(h<102)fam='GE';else if(h<170)fam='GN';else if(h<235)fam='TU';else if(h<292)fam='BL';else fam='VI';
+let lv;if(fam==='WS'||fam==='SW')lv=1;else lv=L>=82?1:L>=68?2:L>=52?3:L>=36?4:5;return fam+'-'+lv;}
+const FAM_ORDER=['WS','GR','SW','BE','BR','GE','OR','RO','PI','VI','BL','TU','GN'];
+const LEVEL_NAME={1:'sehr hell',2:'hell',3:'mittel',4:'dunkel',5:'sehr dunkel'};
+const DMC_LAB=DMC.map(([code,name,hex])=>({code,name,hex,lab:rgbToLab(hexToRgb(hex))}));
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>'#'+String(n).padStart(4,'0');
+function famLabel(box){const[f,l]=box.split('-');return FAM[f]+(f==='WS'||f==='SW'?'':' · '+LEVEL_NAME[l]);}
+function nearest(hex,n=4){const lab=rgbToLab(hexToRgb(hex));return DMC_LAB.map(d=>({...d,de:deltaE(lab,d.lab)})).sort((a,b)=>a.de-b.de).slice(0,n);}
+function deWord(de){return de<1?'identisch':de<2.5?'sehr nah':de<5?'nah':de<10?'ähnlich':'grob';}
+function findDmc(q){q=q.trim().toLowerCase();if(q==='blanc'||q==='weiß'||q==='weiss')q='white';return DMC_LAB.find(d=>d.code.toLowerCase()===q);}
+function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2400);}
+
+/* ---------- storage: artifact db if available, else browser ---------- */
+let scans=[]; let store=null;
+const LS_KEY='drill-sortierer-v1';
+const local={
+  name:'local',
+  load(){try{return JSON.parse(localStorage.getItem(LS_KEY)||'[]')}catch(e){return[]}},
+  save(){try{localStorage.setItem(LS_KEY,JSON.stringify(scans))}catch(e){}},
+  async put(s){const i=scans.findIndex(x=>x.id===s.id);if(i>=0)scans[i]=s;else scans.push(s);this.save();render();},
+  async del(id){scans=scans.filter(x=>x.id!==id);this.save();render();},
+  start(){scans=this.load();render();}
+};
+function dbStore(db){
+  const col=db.collection('scans');
+  return{name:'db',
+    async put(s){const{id,...body}=s;await col.doc(id).set(body);},
+    async del(id){await col.doc(id).delete();},
+    start(){col.onSnapshot(snap=>{scans=snap.docs.map(d=>({id:d.id,...d.data()}));render();},
+      e=>{$('storeHint').textContent='Verbindung zur Ablage verloren ('+e.code+'). Seite neu laden.';});}
+  };
+}
+async function initStore(){
+  let db=null;
+  if(window.claude&&window.claude.use){try{db=await window.claude.use('db');}catch(e){db=null;}}
+  store=db?dbStore(db):local;
+  $('storeHint').textContent=db?'':IS_APP?'Gespeichert auf diesem Handy. Mach ab und zu ein Backup.':'Gespeichert nur in diesem Browser. Mach ab und zu ein Backup.';
+  $('storeHint').hidden=!!db;
+  store.start();
+}
+async function guarded(fn){try{await fn();}catch(e){
+  const code=e&&e.code;toast(code==='quota_exceeded'?'Ablage voll. Alte Einträge löschen.':code==='invalid_argument'?'Keine Schreibrechte für diese Ablage.':'Speichern fehlgeschlagen. Nochmal versuchen.');}}
+const nextNum=()=>scans.reduce((m,s)=>Math.max(m,s.num||0),0)+1;
+
+/* ---------- capture ---------- */
+let current=null; // {hex, source, dmc}
+function openTab(tab){
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===tab));
+  ['photo','hex','dmc'].forEach(t=>$('pane-'+t).hidden=t!==tab);
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>openTab(b.dataset.tab));
+function showResult(hex,source,dmcCode){
+  hex=hex.toUpperCase();
+  const matches=nearest(hex);
+  if(dmcCode&&!matches.some(m=>m.code===dmcCode)){const d=DMC_LAB.find(x=>x.code===dmcCode);matches.unshift({...d,de:0});}
+  current={hex,source,dmc:dmcCode||matches[0].code,matches};
+  renderResult();$('result').hidden=false;
+}
+function renderResult(){
+  const c=current,box=boxCode(c.hex);
+  $('resSwatch').style.setProperty('--c','#'+c.hex);
+  $('resBox').textContent=box;$('resFam').textContent=famLabel(box);$('resHex').textContent='#'+c.hex;
+  $('resMatches').innerHTML=c.matches.map(m=>`<div class="match" role="radio" tabindex="0" aria-checked="${m.code===c.dmc}" data-code="${esc(m.code)}">
+    <span class="drill" style="--c:#${m.hex}"></span><span><b class="mono">${esc(m.code)}</b> ${esc(m.name)}<br><small>${boxCode(m.hex)}</small></span>
+    <small class="mono">ΔE ${m.de.toFixed(1)} · ${deWord(m.de)}</small></div>`).join('');
+  $('resMatches').querySelectorAll('.match').forEach(el=>{const pick=()=>{c.dmc=el.dataset.code;renderResult();};el.onclick=pick;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick();}};});
+  const same=scans.find(s=>s.dmc===c.dmc);
+  const lab=rgbToLab(hexToRgb(c.hex));
+  const close=scans.map(s=>({s,de:deltaE(lab,rgbToLab(hexToRgb(s.hex)))})).filter(x=>x.de<3&&x.s!==same).sort((a,b)=>a.de-b.de)[0];
+  const n=$('resDup');
+  if(same){n.hidden=false;n.innerHTML=`Schon vorhanden: <b class="mono">${pad(same.num)}</b> · DMC ${esc(same.dmc)} in Box <b>${esc(same.box)}</b>. Einfach dazu packen.`;}
+  else if(close){n.hidden=false;n.innerHTML=`Sehr ähnlich zu <b class="mono">${pad(close.s.num)}</b> (DMC ${esc(close.s.dmc)}, ΔE ${close.de.toFixed(1)}) in Box <b>${esc(close.s.box)}</b>.`;}
+  else n.hidden=true;
+  $('saveBtn').textContent=same?'Trotzdem neu speichern':'Speichern als '+pad(nextNum());
+  $('saveHint').textContent='Etikett: '+box+' · DMC '+c.dmc;
+}
+$('saveBtn').onclick=()=>guarded(async()=>{
+  if(!current)return;const num=nextNum();
+  const s={id:'n'+String(num).padStart(5,'0'),num,hex:current.hex,dmc:current.dmc,box:boxCode(current.hex),source:current.source,
+    qty:$('qtyInput').value.trim(),note:$('noteInput').value.trim(),created:new Date().toISOString()};
+  await store.put(s);
+  toast(pad(num)+' gespeichert → Box '+s.box);
+  $('qtyInput').value='';$('noteInput').value='';$('result').hidden=true;current=null;
+});
+
+function normHex(v){v=v.trim().replace(/^#/,'');if(/^[0-9a-f]{3}$/i.test(v))v=v.split('').map(c=>c+c).join('');return /^[0-9a-f]{6}$/i.test(v)?v.toUpperCase():null;}
+$('hexGo').onclick=()=>{const h=normHex($('hexInput').value);if(!h){toast('Hex-Code mit 6 Stellen eingeben, z. B. 3A7BD5');return;}$('hexPicker').value='#'+h.toLowerCase();showResult(h,'hex');};
+$('hexInput').onkeydown=e=>{if(e.key==='Enter')$('hexGo').click();};
+$('hexPicker').oninput=e=>{$('hexInput').value=e.target.value.toUpperCase();showResult(e.target.value.slice(1),'hex');};
+$('dmcList').innerHTML=DMC.map(([c,n])=>`<option value="${esc(c)}">${esc(n)}</option>`).join('');
+$('dmcGo').onclick=()=>{const d=findDmc($('dmcInput').value);if(!d){toast('Diese DMC-Nummer kenne ich nicht.');return;}showResult(d.hex,'dmc',d.code);};
+$('dmcInput').onkeydown=e=>{if(e.key==='Enter')$('dmcGo').click();};
+
+/* photo sampling */
+const cv=$('photo'),ctx=cv.getContext('2d',{willReadFrequently:true});
+let wbMode=false,wbRef=null;
+$('camBtn').onclick=()=>$('camInput').click();
+if(IS_APP){$('pasteZone').hidden=true;try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}}
+if(IS_APP&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){$('liveBtn').hidden=false;$('camBtn').classList.remove('primary');}
+/* live camera: sample the centre of the video stream several times a second */
+let stream=null,liveTimer=null,liveRaw=null,torchOn=false;
+const lc=document.createElement('canvas'),lctx=lc.getContext('2d',{willReadFrequently:true});
+const vid=$('liveVideo');
+function robustMean(d){const px=[];for(let o=0;o<d.length;o+=4)px.push([d[o],d[o+1],d[o+2]]);
+  px.sort((a,b)=>(a[0]*.3+a[1]*.59+a[2]*.11)-(b[0]*.3+b[1]*.59+b[2]*.11));
+  const keep=px.slice(Math.floor(px.length*.15),Math.ceil(px.length*.8)),use=keep.length?keep:px;
+  return [0,1,2].map(k=>use.reduce((s,p)=>s+p[k],0)/use.length);}
+function liveRadius(){const w=vid.getBoundingClientRect().width||1;return {css:+$('radius').value*1.5,px:Math.max(2,Math.round(+$('radius').value*1.5*vid.videoWidth/w))};}
+function sizeReticle(){const r=liveRadius().css;$('reticle').style.width=$('reticle').style.height=(2*r)+'px';}
+function sampleLive(){
+  if(!vid.videoWidth)return;const r=liveRadius().px,s=2*r+1;lc.width=lc.height=s;
+  lctx.drawImage(vid,vid.videoWidth/2-r,vid.videoHeight/2-r,s,s,0,0,s,s);
+  const d=lctx.getImageData(0,0,s,s).data,inside=[];
+  for(let j=0;j<s;j++)for(let i=0;i<s;i++){if((i-r)**2+(j-r)**2>r*r)continue;const o=(j*s+i)*4;inside.push(d[o],d[o+1],d[o+2],255);}
+  liveRaw=robustMean(inside);
+  const rgb=wbRef?liveRaw.map((v,k)=>v*245/Math.max(1,wbRef[k])):liveRaw,hex=rgbToHex(...rgb),m=nearest(hex,1)[0];
+  $('liveSwatch').style.setProperty('--c','#'+hex);$('liveBox').textContent=boxCode(hex);
+  $('liveDmc').textContent='DMC '+m.code+' · ΔE '+m.de.toFixed(1);
+}
+async function startLive(){
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});}
+  catch(e){toast(e&&e.name==='NotAllowedError'?'Kamera nicht erlaubt. In den Browser-Einstellungen freigeben.':'Kamera nicht verfügbar. Nimm „Foto aufnehmen“.');return;}
+  vid.srcObject=stream;try{await vid.play();}catch(e){}
+  $('live').hidden=false;$('photoWrap').hidden=true;$('liveBtn').hidden=true;sizeReticle();
+  const tr=stream.getVideoTracks()[0],caps=tr.getCapabilities?tr.getCapabilities():{};$('liveTorch').hidden=!caps.torch;
+  clearInterval(liveTimer);liveTimer=setInterval(sampleLive,200);
+}
+function stopLive(){clearInterval(liveTimer);liveTimer=null;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;torchOn=false;
+  $('liveTorch').textContent='Licht an';$('live').hidden=true;$('liveBtn').hidden=!IS_APP;}
+$('liveBtn').onclick=startLive;$('liveClose').onclick=stopLive;
+$('liveTake').onclick=()=>{sampleLive();if(!liveRaw)return;const rgb=wbRef?liveRaw.map((v,k)=>v*245/Math.max(1,wbRef[k])):liveRaw;
+  showResult(rgbToHex(...rgb),'kamera');$('result').scrollIntoView({behavior:'smooth',block:'nearest'});};
+$('liveWb').onclick=()=>{sampleLive();if(!liveRaw)return;wbRef=liveRaw;updWb();toast('Weißabgleich gesetzt');};
+$('liveTorch').onclick=async()=>{const tr=stream&&stream.getVideoTracks()[0];if(!tr)return;
+  try{torchOn=!torchOn;await tr.applyConstraints({advanced:[{torch:torchOn}]});$('liveTorch').textContent=torchOn?'Licht aus':'Licht an';}catch(e){toast('Licht lässt sich nicht schalten.');}};
+$('radius').addEventListener('input',()=>{if(stream)sizeReticle();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream)stopLive();});
+$('galBtn').onclick=()=>$('photoInput').click();
+$('importBtn').onclick=()=>$('importInput').click();
+$('camInput').onchange=$('photoInput').onchange=e=>{const f=e.target.files[0];e.target.value='';loadPhoto(f);};
+function clipImage(cd){if(!cd)return null;
+  const f=[...(cd.files||[])].find(x=>x.type.startsWith('image/'));if(f)return f;
+  for(const it of cd.items||[])if(it.kind==='file'&&it.type.startsWith('image/'))return it.getAsFile();return null;}
+const PASTE_TEXT=$('pasteZone').innerHTML;
+function resetPaste(){$('pasteZone').innerHTML=PASTE_TEXT;}
+document.addEventListener('paste',e=>{const f=clipImage(e.clipboardData);
+  if(f){e.preventDefault();openTab('photo');loadPhoto(f);resetPaste();$('pasteZone').blur();return;}
+  if(e.target.closest&&e.target.closest('#pasteZone'))setTimeout(()=>{ // some browsers only insert an <img>
+    const img=$('pasteZone').querySelector('img');
+    if(img&&img.src){openTab('photo');drawPhoto(img.src);}
+    else toast('Kein Bild in der Zwischenablage. Erst ein Foto kopieren.');
+    resetPaste();$('pasteZone').blur();},50);});
+$('pasteZone').addEventListener('focus',()=>{$('pasteZone').textContent='';});
+$('pasteZone').addEventListener('blur',()=>{if(!$('pasteZone').querySelector('img'))resetPaste();});
+$('pasteZone').addEventListener('beforeinput',e=>{if(e.inputType!=='insertFromPaste'&&e.inputType!=='insertFromDrop')e.preventDefault();});
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{const f=[...(e.dataTransfer?.files||[])].find(x=>x.type.startsWith('image/'));if(f){e.preventDefault();openTab('photo');loadPhoto(f);}});
+function loadPhoto(f){if(!f)return;if(stream)stopLive();drawPhoto(URL.createObjectURL(f));}
+function drawPhoto(url){const img=new Image();
+  img.onload=()=>{const max=1400,k=Math.min(1,max/Math.max(img.width,img.height));cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
+    ctx.drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(url);$('photoWrap').hidden=false;$('marker').hidden=true;wbRef=null;updWb();
+    $('photoHint').textContent='Auf einen Drill tippen, um die Farbe zu messen.';};
+  img.onerror=()=>toast('Bild konnte nicht geladen werden.');img.src=url;};
+function sampleAt(x,y,r){
+  const x0=Math.max(0,x-r),y0=Math.max(0,y-r),w=Math.min(cv.width,x+r+1)-x0,h=Math.min(cv.height,y+r+1)-y0;
+  const d=ctx.getImageData(x0,y0,w,h).data,px=[];
+  for(let j=0;j<h;j++)for(let i=0;i<w;i++){const dx=x0+i-x,dy=y0+j-y;if(dx*dx+dy*dy>r*r)continue;const o=(j*w+i)*4;px.push([d[o],d[o+1],d[o+2]]);}
+  // drop glare (brightest) and shadow edges (darkest), average the rest
+  px.sort((a,b)=>(a[0]*.3+a[1]*.59+a[2]*.11)-(b[0]*.3+b[1]*.59+b[2]*.11));
+  const keep=px.slice(Math.floor(px.length*.15),Math.ceil(px.length*.8));const use=keep.length?keep:px;
+  return [0,1,2].map(k=>use.reduce((s,p)=>s+p[k],0)/use.length);
+}
+cv.onclick=e=>{
+  const rect=cv.getBoundingClientRect(),sx=cv.width/rect.width;
+  const x=Math.round((e.clientX-rect.left)*sx),y=Math.round((e.clientY-rect.top)*sx),r=Math.max(2,Math.round(+$('radius').value*sx));
+  const m=$('marker');m.hidden=false;m.style.left=(e.clientX-rect.left)+'px';m.style.top=(e.clientY-rect.top)+'px';m.style.width=m.style.height=(2*r/sx)+'px';
+  let rgb=sampleAt(x,y,r);
+  if(wbMode){wbRef=rgb;wbMode=false;updWb();toast('Weißabgleich gesetzt. Jetzt auf einen Drill tippen.');return;}
+  if(wbRef)rgb=rgb.map((v,k)=>v*245/Math.max(1,wbRef[k]));
+  showResult(rgbToHex(...rgb),'foto');
+};
+function updWb(){const b=$('wbBtn');b.textContent=wbMode?'Tippe auf weißes Papier …':wbRef?'Weißabgleich: an (zurücksetzen)':'Weißabgleich: aus';}
+$('wbBtn').onclick=()=>{if(wbRef){wbRef=null;wbMode=false;}else{if($('photoWrap').hidden){toast(stream?'Kamera auf weißes Papier richten und „Weiß hier setzen“ tippen.':'Erst ein Foto wählen.');return;}wbMode=true;}updWb();};
+
+/* ---------- boxes ---------- */
+let editing=null,confirmDel=null;
+function sortKey(box){const[f,l]=box.split('-');return FAM_ORDER.indexOf(f)*10+(+l);}
+function dmcName(code){const d=DMC_LAB.find(x=>x.code===code);return d?d.name:'';}
+function render(){
+  $('statScans').textContent=scans.length;
+  const q=$('search').value.trim().toLowerCase();
+  const list=scans.filter(s=>!q||[pad(s.num),s.dmc,s.box,s.hex,dmcName(s.dmc),famLabel(s.box),s.note,s.qty].join(' ').toLowerCase().includes(q));
+  const groups={};list.forEach(s=>(groups[s.box]=groups[s.box]||[]).push(s));
+  $('statBoxes').textContent=new Set(scans.map(s=>s.box)).size;
+  const keys=Object.keys(groups).sort((a,b)=>sortKey(a)-sortKey(b));
+  if(!scans.length){$('boxes').innerHTML='<div class="empty" style="grid-column:1/-1">Noch keine Farben erfasst. Fotografiere ein paar Drills oder gib oben eine DMC-Nummer ein, dann erscheinen hier deine Boxen.</div>';}
+  else if(!keys.length){$('boxes').innerHTML='<div class="empty" style="grid-column:1/-1">Nichts gefunden für „'+esc(q)+'“.</div>';}
+  else $('boxes').innerHTML=keys.map(k=>{
+    const items=groups[k].sort((a,b)=>(+(rgbToLab(hexToRgb(b.hex))[0]))-(+(rgbToLab(hexToRgb(a.hex))[0])));
+    return `<article class="box"><div class="box-strip" style="background:linear-gradient(90deg,${items.map(i=>'#'+i.hex).join(',')}${items.length===1?',#'+items[0].hex:''})"></div>
+    <div class="box-head"><span class="code">${k}</span><span class="muted">${esc(famLabel(k))}</span><span class="count label">${items.length} ${items.length===1?'Farbe':'Farben'}</span></div>
+    <ul class="items">${items.map(itemHtml).join('')}</ul></article>`;}).join('');
+  $('boxes').querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>act(b.dataset.act,b.dataset.id));
+  renderPairs();
+  if(current)renderResult();
+}
+function itemHtml(s){
+  const ed=editing===s.id;
+  return `<li class="item"><span class="drill" style="--c:#${s.hex}"></span>
+   <span class="name"><b class="mono">${pad(s.num)}</b> · DMC <b class="mono">${esc(s.dmc)}</b> ${esc(dmcName(s.dmc))}
+   <small class="mono">#${s.hex}${s.qty?' · '+esc(s.qty):''}${s.note?' · '+esc(s.note):''}</small></span>
+   <button class="iconbtn" data-act="edit" data-id="${s.id}">${ed?'Schließen':'Bearbeiten'}</button>
+   ${ed?`<div class="edit"><div class="fields"><input type="text" id="eq-${s.id}" value="${esc(s.qty)}" placeholder="Menge"><input type="text" id="en-${s.id}" value="${esc(s.note)}" placeholder="Notiz"></div>
+   <div class="row"><button class="btn small primary" data-act="save" data-id="${s.id}">Übernehmen</button>
+   <button class="btn small danger" data-act="del" data-id="${s.id}">${confirmDel===s.id?'Wirklich löschen?':'Löschen'}</button></div></div>`:''}</li>`;
+}
+function act(a,id){
+  const s=scans.find(x=>x.id===id);if(!s)return;
+  if(a==='edit'){editing=editing===id?null:id;confirmDel=null;render();}
+  else if(a==='save'){const u={...s,qty:$('eq-'+id).value.trim(),note:$('en-'+id).value.trim()};editing=null;guarded(()=>store.put(u)).then(render);}
+  else if(a==='del'){if(confirmDel!==id){confirmDel=id;render();return;}confirmDel=null;editing=null;guarded(()=>store.del(id)).then(()=>{toast(pad(s.num)+' gelöscht');render();});}
+}
+$('search').oninput=render;
+
+function renderPairs(){
+  const tol=+$('tol').value;$('tolVal').textContent='ΔE '+tol;
+  const labs=scans.map(s=>({s,lab:rgbToLab(hexToRgb(s.hex))})),out=[];
+  for(let i=0;i<labs.length;i++)for(let j=i+1;j<labs.length;j++){const de=deltaE(labs[i].lab,labs[j].lab);if(de<=tol)out.push({a:labs[i].s,b:labs[j].s,de});}
+  out.sort((x,y)=>x.de-y.de);
+  const el=$('pairs');
+  if(scans.length<2){el.innerHTML='<div class="empty">Sobald mindestens zwei Farben erfasst sind, stehen hier Paare, die du zusammenlegen kannst.</div>';return;}
+  if(!out.length){el.innerHTML='<div class="empty">Keine Paare innerhalb ΔE '+tol+'. Toleranz erhöhen, um entferntere Farben zu sehen.</div>';return;}
+  el.innerHTML=out.slice(0,60).map(p=>`<div class="pair"><span class="drill" style="--c:#${p.a.hex}"></span><span class="mono">${pad(p.a.num)} · ${esc(p.a.dmc)} · ${p.a.box}</span>
+   <span class="muted">+</span><span class="drill" style="--c:#${p.b.hex}"></span><span class="mono">${pad(p.b.num)} · ${esc(p.b.dmc)} · ${p.b.box}</span>
+   <span class="de mono muted">ΔE ${p.de.toFixed(1)} · ${deWord(p.de)}</span></div>`).join('')+(out.length>60?`<p class="hint">… und ${out.length-60} weitere.</p>`:'');
+}
+$('tol').oninput=renderPairs;
+
+/* ---------- legend from the DMC palette ---------- */
+(function(){
+  const by={};DMC_LAB.forEach(d=>{const b=boxCode(d.hex);(by[b]=by[b]||[]).push(d);});
+  let h='<span></span>'+[1,2,3,4,5].map(l=>`<span class="label">${l} · ${LEVEL_NAME[l]}</span>`).join('');
+  FAM_ORDER.forEach(f=>{h+=`<span class="fam">${f} <span class="muted" style="font-weight:400">${FAM[f]}</span></span>`;
+    for(let l=1;l<=5;l++){const arr=by[f+'-'+l]||[];if(!arr.length||((f==='WS'||f==='SW')&&l>1)){h+='<span class="cell muted">–</span>';continue;}
+      h+=`<span class="cell">${arr.slice(0,4).map(d=>`<span class="drill" style="--s:18px;--c:#${d.hex}" title="DMC ${esc(d.code)} ${esc(d.name)}"></span>`).join('')}</span>`;}});
+  $('legend').innerHTML=h;
+})();
+
+/* ---------- export / import ---------- */
+async function offer(filename,data){
+  let dl=null;if(window.claude&&window.claude.use){try{dl=await window.claude.use('downloads');}catch(e){}}
+  if(dl){try{await dl.save({filename,data});toast('Datei gespeichert');return;}catch(e){if(e&&e.code==='declined')return;}}
+  if(!window.claude){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data]));a.download=filename;a.click();return;}
+  $('exportOut').hidden=false;$('exportText').value=data;$('exportText').select();
+}
+const sorted=()=>[...scans].sort((a,b)=>a.num-b.num);
+$('exportCsv').onclick=()=>{
+  const rows=[['Nr','Box','Farbfamilie','DMC','DMC-Name','Hex','Menge','Notiz','Quelle','Datum']].concat(sorted().map(s=>[pad(s.num),s.box,famLabel(s.box),s.dmc,dmcName(s.dmc),'#'+s.hex,s.qty,s.note,s.source,(s.created||'').slice(0,10)]));
+  offer('rest-diamonds.csv','﻿'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n'));
+};
+$('exportJson').onclick=()=>offer('rest-diamonds-backup.json',JSON.stringify(sorted(),null,1));
+$('importInput').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  let arr;try{arr=JSON.parse(await f.text());if(!Array.isArray(arr))throw 0;}catch(_){toast('Das ist keine Backup-Datei.');return;}
+  let n=0,num=nextNum()-1;
+  for(const r of arr){const hex=normHex(r.hex||'');if(!hex)continue;
+    if(scans.some(s=>s.hex===hex&&s.dmc===r.dmc))continue;
+    num++;
+    await guarded(()=>store.put({id:'n'+String(num).padStart(5,'0'),num,hex,dmc:String(r.dmc||nearest(hex,1)[0].code),box:boxCode(hex),source:r.source||'import',qty:r.qty||'',note:r.note||'',created:r.created||new Date().toISOString()}));
+    n++;}
+  toast(n+' Farben importiert');
+};
+
+initStore();
+</script>
+
+<script>
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
